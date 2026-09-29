@@ -1,16 +1,48 @@
+import json
+import math
+from pathlib import Path
+
 import openmc
 from libra_toolbox.neutronics import vault
 from libra_toolbox.neutronics.neutron_source import A325_generator_diamond
 from libra_toolbox.neutronics.materials import *
 
 
-def baby_geometry(x_c: float, y_c: float, z_c: float):
+def cllif_height_for_mass(
+    salt_mass_g: float,
+    density: float,
+    radius: float,
+    heater_r: float,
+    heater_gap: float,
+) -> float:
+    """Height (cm) of a salt column that holds salt_mass_g of salt.
+
+    The heater well starts heater_gap above the crucible floor and runs up
+    through the salt, so it displaces salt everywhere above that height.
+
+    Args:
+        salt_mass_g: salt mass (g)
+        density: salt density (g/cm3)
+        radius: inner radius of the crucible (cm)
+        heater_r: radius of the heater well (cm)
+        heater_gap: height of the bottom of the heater well above the floor (cm)
+    """
+    volume = salt_mass_g / density
+    return (volume - math.pi * heater_r**2 * heater_gap) / (
+        math.pi * (radius**2 - heater_r**2)
+    )
+
+
+def baby_geometry(x_c: float, y_c: float, z_c: float, salt_mass: float = None):
     """Returns the geometry for the BABY experiment.
 
     Args:
         x_c: x-coordinate of the center of the BABY experiment (cm)
         y_c: y-coordinate of the center of the BABY experiment (cm)
         z_c: z-coordinate of the center of the BABY experiment (cm)
+        salt_mass: salt mass (kg). If given, the salt column height is set
+            from it and the gas gap above the salt shrinks to keep the
+            crucible's inner height unchanged. If None, the 1 L column is used.
 
     Returns:
         the sphere, cllif cell, and cells
@@ -52,6 +84,18 @@ def baby_geometry(x_c: float, y_c: float, z_c: float):
     firebrick_radius = 12.002
     vessel_radius = 12.853
     external_radius = 13.272
+
+    if salt_mass is not None:
+        crucible_inner_height = cllif_thickness + gap_thickness
+        cllif_thickness = cllif_height_for_mass(
+            salt_mass * 1e3,
+            get_exp_cllif_density(650),
+            cllif_radius,
+            heater_r,
+            heater_gap,
+        )
+        gap_thickness = crucible_inner_height - cllif_thickness
+        assert gap_thickness > 0, "salt does not fit in the crucible"
 
     source_h = 50.00
     source_x = x_c - 13.50
@@ -368,7 +412,12 @@ def baby_model():
     x_c = 587  # cm
     y_c = 60  # cm
     z_c = 100  # cm
-    sphere, cllif_cell, cells = baby_geometry(x_c, y_c, z_c)
+    general_data_file = Path(__file__).parents[2] / "data" / "general.json"
+    with open(general_data_file) as f:
+        salt_mass = json.load(f)["general_data"]["salt_mass"]
+    assert salt_mass["unit"] == "kg"
+
+    sphere, cllif_cell, cells = baby_geometry(x_c, y_c, z_c, salt_mass["value"])
 
     ############################################################################
     # Define Settings
