@@ -412,12 +412,16 @@ def baby_model():
     x_c = 587  # cm
     y_c = 60  # cm
     z_c = 100  # cm
+    # Salt mass from the run's own data file. If it is missing, keep the 1 L column.
+    salt_mass_kg = None
     general_data_file = Path(__file__).parents[2] / "data" / "general.json"
-    with open(general_data_file) as f:
-        salt_mass = json.load(f)["general_data"]["salt_mass"]
-    assert salt_mass["unit"] == "kg"
+    if general_data_file.exists():
+        with open(general_data_file) as f:
+            salt_mass = json.load(f).get("general_data", {}).get("salt_mass")
+        if salt_mass and salt_mass.get("unit") == "kg":
+            salt_mass_kg = salt_mass["value"]
 
-    sphere, cllif_cell, cells = baby_geometry(x_c, y_c, z_c, salt_mass["value"])
+    sphere, cllif_cell, cells = baby_geometry(x_c, y_c, z_c, salt_mass_kg)
 
     ############################################################################
     # Define Settings
