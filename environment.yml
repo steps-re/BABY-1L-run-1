@@ -3,7 +3,10 @@ channels:
   - conda-forge
 dependencies:
   - python
-  - openmc~=0.15.0
+  # held below 0.15.3 until libra-toolbox ships LIBRA-project/libra-toolbox#95
+  # (fixes openmc >= 0.15.3 "reference v must not be parallel to reference u").
+  # drop the pin after the next libra-toolbox release.
+  - openmc>=0.15.0,<0.15.3
   - openmc-plotter
   - numpy # add version tag
   - scipy # add version tag
