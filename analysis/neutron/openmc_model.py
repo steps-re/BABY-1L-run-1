@@ -33,16 +33,16 @@ def cllif_height_for_mass(
     )
 
 
-def baby_geometry(x_c: float, y_c: float, z_c: float, salt_mass: float = None):
+def baby_geometry(x_c: float, y_c: float, z_c: float, salt_mass: float):
     """Returns the geometry for the BABY experiment.
 
     Args:
         x_c: x-coordinate of the center of the BABY experiment (cm)
         y_c: y-coordinate of the center of the BABY experiment (cm)
         z_c: z-coordinate of the center of the BABY experiment (cm)
-        salt_mass: salt mass (kg). If given, the salt column height is set
-            from it and the gas gap above the salt shrinks to keep the
-            crucible's inner height unchanged. If None, the 1 L column is used.
+        salt_mass: salt mass (kg). The salt column height is set from it
+            and the gas gap above the salt shrinks to keep the crucible's
+            inner height unchanged.
 
     Returns:
         the sphere, cllif cell, and cells
@@ -85,17 +85,16 @@ def baby_geometry(x_c: float, y_c: float, z_c: float, salt_mass: float = None):
     vessel_radius = 12.853
     external_radius = 13.272
 
-    if salt_mass is not None:
-        crucible_inner_height = cllif_thickness + gap_thickness
-        cllif_thickness = cllif_height_for_mass(
-            salt_mass * 1e3,
-            get_exp_cllif_density(650),
-            cllif_radius,
-            heater_r,
-            heater_gap,
-        )
-        gap_thickness = crucible_inner_height - cllif_thickness
-        assert gap_thickness > 0, "salt does not fit in the crucible"
+    crucible_inner_height = cllif_thickness + gap_thickness
+    cllif_thickness = cllif_height_for_mass(
+        salt_mass * 1e3,
+        get_exp_cllif_density(650),
+        cllif_radius,
+        heater_r,
+        heater_gap,
+    )
+    gap_thickness = crucible_inner_height - cllif_thickness
+    assert gap_thickness > 0, "salt does not fit in the crucible"
 
     source_h = 50.00
     source_x = x_c - 13.50
@@ -412,14 +411,13 @@ def baby_model():
     x_c = 587  # cm
     y_c = 60  # cm
     z_c = 100  # cm
-    # Salt mass from the run's own data file. If it is missing, keep the 1 L column.
-    salt_mass_kg = None
+    # Salt mass from the run's own data file
     general_data_file = Path(__file__).parents[2] / "data" / "general.json"
-    if general_data_file.exists():
-        with open(general_data_file) as f:
-            salt_mass = json.load(f).get("general_data", {}).get("salt_mass")
-        if salt_mass and salt_mass.get("unit") == "kg":
-            salt_mass_kg = salt_mass["value"]
+    with open(general_data_file) as f:
+        salt_mass = json.load(f)["general_data"]["salt_mass"]
+    if salt_mass["unit"] != "kg":
+        raise ValueError(f"salt_mass unit must be kg, got {salt_mass['unit']}")
+    salt_mass_kg = salt_mass["value"]
 
     sphere, cllif_cell, cells = baby_geometry(x_c, y_c, z_c, salt_mass_kg)
 
