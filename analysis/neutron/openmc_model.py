@@ -94,7 +94,8 @@ def baby_geometry(x_c: float, y_c: float, z_c: float, salt_mass: float):
         heater_gap,
     )
     gap_thickness = crucible_inner_height - cllif_thickness
-    assert gap_thickness > 0, "salt does not fit in the crucible"
+    if gap_thickness <= 0:
+        raise ValueError("salt does not fit in the crucible")
 
     source_h = 50.00
     source_x = x_c - 13.50
