@@ -563,10 +563,10 @@ if not filename.exists():
 import openmc
 
 sp = openmc.StatePoint(filename)
-tally_df = sp.get_tally(name="TBR").get_pandas_dataframe()
-calculated_TBR = tally_df["mean"].iloc[0] * ureg.particle * ureg.neutron**-1
+tbr_tally = sp.get_tally(name="TBR")
+calculated_TBR = float(tbr_tally.mean.squeeze()) * ureg.particle * ureg.neutron**-1
 calculated_TBR_std_dev = (
-    tally_df["std. dev."].iloc[0] * ureg.particle * ureg.neutron**-1
+    float(tbr_tally.std_dev.squeeze()) * ureg.particle * ureg.neutron**-1
 )
 
 # TBR from measurements
